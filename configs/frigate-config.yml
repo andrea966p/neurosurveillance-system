@@ -1,0 +1,194 @@
+# =============================================================================
+# Frigate NVR Configuration - NeuroSurveillance System v5.0
+# =============================================================================
+# Location: /srv/frigate/config/config.yml
+#
+# IMPORTANT: Replace all {VARIABLES} with your actual values before deploying.
+#
+# This configuration is optimized for recording-only operation with
+# Intel QSV hardware acceleration. Detection is disabled for maximum stability.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# MQTT Configuration
+# -----------------------------------------------------------------------------
+# Disabled - not needed for basic recording
+# Enable if you want Home Assistant integration
+mqtt:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# Database Configuration
+# -----------------------------------------------------------------------------
+database:
+  path: /media/frigate/frigate.db
+
+# -----------------------------------------------------------------------------
+# Detection Configuration
+# -----------------------------------------------------------------------------
+# DISABLED for pure recording mode
+# Enable only if you need object detection (increases CPU usage significantly)
+detect:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# FFmpeg Global Settings
+# -----------------------------------------------------------------------------
+# Intel QSV hardware acceleration
+# This reduces CPU usage from ~100% to ~10%
+#
+# Other presets available:
+#   - preset-intel-qsv-h265 (not recommended for Pi streams)
+#   - preset-nvidia (for NVIDIA GPUs)
+#   - preset-rpi-64-h264 (for Pi as NVR)
+ffmpeg:
+  hwaccel_args: preset-intel-qsv-h264
+
+# -----------------------------------------------------------------------------
+# Recording Configuration
+# -----------------------------------------------------------------------------
+record:
+  enabled: true
+  retain:
+    # Number of days to keep recordings
+    # Adjust based on storage capacity
+    # 7 days @ 1.5Mbps × 2 cameras ≈ 225 GB
+    days: 7
+    mode: all
+
+  # How often to check for expired recordings (seconds)
+  expire_interval: 60
+
+# -----------------------------------------------------------------------------
+# Snapshots Configuration
+# -----------------------------------------------------------------------------
+# Disabled - not needed without detection
+snapshots:
+  enabled: false
+
+# -----------------------------------------------------------------------------
+# Camera Definitions
+# -----------------------------------------------------------------------------
+cameras:
+  # ---------------------------------------------------------------------------
+  # Camera 0
+  # ---------------------------------------------------------------------------
+  {CAMERA_0_ID}:
+    # FFmpeg input configuration
+    ffmpeg:
+      # Hardware acceleration for this camera
+      hwaccel_args: preset-intel-qsv-h264
+
+      inputs:
+        # RTSP stream from Raspberry Pi
+        - path: rtsp://{PI_IP}:8554/{CAMERA_0_ID}
+
+          # Input arguments for stable streaming
+          input_args:
+            # CRITICAL: Use TCP transport for reliability
+            # UDP causes frame drops over network
+            - -rtsp_transport
+            - tcp
+
+            # Buffer settings for network jitter
+            # Increase if experiencing frame drops
+            - -buffer_size
+            - "512000"
+
+            # Maximum delay before dropping frames
+            - -max_delay
+            - "500000"
+
+          # This stream is used for recording
+          roles:
+            - record
+
+    # Detection disabled for this camera
+    detect:
+      enabled: false
+
+    # Recording enabled for this camera
+    record:
+      enabled: true
+
+  # ---------------------------------------------------------------------------
+  # Camera 1
+  # ---------------------------------------------------------------------------
+  {CAMERA_1_ID}:
+    ffmpeg:
+      hwaccel_args: preset-intel-qsv-h264
+
+      inputs:
+        - path: rtsp://{PI_IP}:8554/{CAMERA_1_ID}
+          input_args:
+            - -rtsp_transport
+            - tcp
+            - -buffer_size
+            - "512000"
+            - -max_delay
+            - "500000"
+          roles:
+            - record
+
+    detect:
+      enabled: false
+
+    record:
+      enabled: true
+
+# -----------------------------------------------------------------------------
+# UI Configuration
+# -----------------------------------------------------------------------------
+ui:
+  # Set to your local timezone for correct timestamps
+  timezone: "{TIMEZONE}"
+
+# -----------------------------------------------------------------------------
+# Logging Configuration
+# -----------------------------------------------------------------------------
+logger:
+  # Default log level
+  default: info
+
+  # Component-specific levels
+  logs:
+    # Increase to 'debug' for troubleshooting video issues
+    frigate.video: info
+
+# =============================================================================
+# VARIABLE REFERENCE
+# =============================================================================
+#
+# | Variable        | Description                  | Example              |
+# |-----------------|------------------------------|----------------------|
+# | {PI_IP}         | Raspberry Pi IP address      | 192.168.1.100        |
+# | {CAMERA_0_ID}   | First camera stream name     | pi_cam_0             |
+# | {CAMERA_1_ID}   | Second camera stream name    | pi_cam_1             |
+# | {TIMEZONE}      | Your timezone                | America/New_York     |
+#
+# =============================================================================
+# ADDING MORE CAMERAS
+# =============================================================================
+#
+# To add cameras from additional Raspberry Pis, duplicate the camera section:
+#
+#   pi2_cam_0:
+#     ffmpeg:
+#       hwaccel_args: preset-intel-qsv-h264
+#       inputs:
+#         - path: rtsp://{SECOND_PI_IP}:8554/pi_cam_0
+#           input_args:
+#             - -rtsp_transport
+#             - tcp
+#             - -buffer_size
+#             - "512000"
+#             - -max_delay
+#             - "500000"
+#           roles:
+#             - record
+#     detect:
+#       enabled: false
+#     record:
+#       enabled: true
+#
+# =============================================================================

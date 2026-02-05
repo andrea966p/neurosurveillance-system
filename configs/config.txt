@@ -1,0 +1,101 @@
+# =============================================================================
+# Raspberry Pi Boot Configuration - NeuroSurveillance System
+# =============================================================================
+# Location: /boot/firmware/config.txt
+#
+# IMPORTANT: APPEND these lines to the END of your existing config.txt
+# Do NOT replace the entire file!
+#
+# These settings optimize the Pi 5 for 24/7 surveillance operation.
+# =============================================================================
+
+# =============================================================================
+# SURVEILLANCE SYSTEM HARDENING
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Disable Unused Interfaces
+# -----------------------------------------------------------------------------
+# WiFi is disabled because:
+# - Ethernet is more reliable for RTSP streaming
+# - Reduces interference and power consumption
+# - Eliminates potential network instability
+#
+# Bluetooth is disabled because:
+# - Not needed for surveillance operation
+# - Frees system resources
+# - Reduces attack surface
+# -----------------------------------------------------------------------------
+dtoverlay=disable-wifi
+dtoverlay=disable-bt
+
+# -----------------------------------------------------------------------------
+# GPU Memory Allocation
+# -----------------------------------------------------------------------------
+# 128MB is required for dual camera operation
+# - Single camera: 64MB might work
+# - Dual cameras: 128MB recommended
+# - Do not exceed 256MB (wastes RAM)
+# -----------------------------------------------------------------------------
+gpu_mem={GPU_MEM}
+
+# -----------------------------------------------------------------------------
+# Hardware Watchdog
+# -----------------------------------------------------------------------------
+# Enables automatic system reboot if the system freezes
+# Critical for 24/7 unattended operation
+#
+# How it works:
+# - Kernel must periodically "pet" the watchdog
+# - If the kernel freezes, watchdog triggers reboot
+# - Default timeout is ~15 seconds
+#
+# Verify after reboot:
+#   cat /sys/class/watchdog/watchdog0/state
+#   # Should output: active
+# -----------------------------------------------------------------------------
+dtparam=watchdog=on
+
+# =============================================================================
+# OPTIONAL PERFORMANCE TUNING
+# =============================================================================
+# Uncomment these if you experience thermal issues:
+#
+# # Force lower CPU frequency (reduces heat)
+# arm_freq=1800
+#
+# # Enable more aggressive cooling fan control
+# dtparam=fan_temp0=50000
+# dtparam=fan_temp1=60000
+# dtparam=fan_temp2=70000
+#
+# =============================================================================
+
+# =============================================================================
+# DEPLOYMENT INSTRUCTIONS
+# =============================================================================
+#
+# 1. BACKUP your current config:
+#    sudo cp /boot/firmware/config.txt /boot/firmware/config.txt.backup
+#
+# 2. APPEND these settings (do not replace!):
+#    sudo nano /boot/firmware/config.txt
+#    # Scroll to bottom, paste the settings above
+#
+# 3. REBOOT for changes to take effect:
+#    sudo reboot
+#
+# 4. VERIFY after reboot:
+#    # Check GPU memory
+#    vcgencmd get_mem gpu
+#    # Expected: gpu=128M
+#
+#    # Check watchdog
+#    cat /sys/class/watchdog/watchdog0/state
+#    # Expected: active
+#
+#    # Verify no WiFi/BT
+#    ip link show | grep -E "wlan|bluetooth"
+#    # Expected: no output
+#
+# =============================================================================

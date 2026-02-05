@@ -1,0 +1,113 @@
+# =============================================================================
+# go2rtc Systemd Service - NeuroSurveillance System v5.0
+# =============================================================================
+# Location: /etc/systemd/system/go2rtc.service
+#
+# IMPORTANT: Replace all {VARIABLES} with your actual values before deploying.
+#
+# CRITICAL: KillMode=control-group is MANDATORY!
+# Without it, child processes (rpicam-vid) become zombies and freeze the system.
+# =============================================================================
+
+[Unit]
+Description=go2rtc RTSP Streaming Service (NeuroSurveillance v5.0)
+Documentation=https://github.com/AlexxIT/go2rtc
+
+# Wait for network to be fully available before starting
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# -----------------------------------------------------------------------------
+# Process Configuration
+# -----------------------------------------------------------------------------
+# Run as non-root user for security
+User={PI_USER}
+Group=video
+
+# Working directory for go2rtc
+WorkingDirectory=/opt/go2rtc
+
+# Start command
+ExecStart=/opt/go2rtc/go2rtc -config /opt/go2rtc/go2rtc.yaml
+
+# -----------------------------------------------------------------------------
+# CRITICAL: Process Termination Settings
+# -----------------------------------------------------------------------------
+# KillMode=control-group ensures ALL child processes are terminated
+# This includes rpicam-vid and ffmpeg processes spawned by go2rtc
+#
+# WITHOUT THIS SETTING:
+# - rpicam-vid processes become zombies on service restart
+# - System will freeze after several restarts
+# - SSH will become unresponsive
+# - Hard reboot will be required
+#
+# DO NOT CHANGE TO 'mixed' or 'process'!
+# -----------------------------------------------------------------------------
+KillMode=control-group
+KillSignal=SIGTERM
+TimeoutStopSec=10
+
+# -----------------------------------------------------------------------------
+# Restart Policy
+# -----------------------------------------------------------------------------
+# Automatically restart on failure with 5-second delay
+Restart=always
+RestartSec=5
+
+# -----------------------------------------------------------------------------
+# Resource Limits
+# -----------------------------------------------------------------------------
+# Prevent runaway CPU usage (adjust based on your needs)
+CPUQuota=70%
+
+# Prevent memory exhaustion (512MB should be plenty)
+MemoryMax=512M
+
+# Disable swap usage to prevent SD card wear
+MemorySwapMax=0
+
+# -----------------------------------------------------------------------------
+# Security Settings
+# -----------------------------------------------------------------------------
+# Increase file descriptor limit for multiple streams
+LimitNOFILE=4096
+
+# Prevent privilege escalation
+NoNewPrivileges=true
+
+# -----------------------------------------------------------------------------
+# Logging
+# -----------------------------------------------------------------------------
+# Send output to systemd journal
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=go2rtc
+
+[Install]
+# Start on boot
+WantedBy=multi-user.target
+
+# =============================================================================
+# DEPLOYMENT COMMANDS
+# =============================================================================
+#
+# After copying this file to /etc/systemd/system/go2rtc.service:
+#
+#   # Reload systemd configuration
+#   sudo systemctl daemon-reload
+#
+#   # Enable service to start on boot
+#   sudo systemctl enable go2rtc.service
+#
+#   # Start the service
+#   sudo systemctl start go2rtc.service
+#
+#   # Check status
+#   sudo systemctl status go2rtc.service
+#
+#   # View logs
+#   journalctl -u go2rtc.service -f
+#
+# =============================================================================

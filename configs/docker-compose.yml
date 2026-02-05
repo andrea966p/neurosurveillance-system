@@ -1,0 +1,153 @@
+# =============================================================================
+# Frigate NVR Docker Compose - NeuroSurveillance System v5.0
+# =============================================================================
+# Location: /srv/frigate/docker-compose.yml
+#
+# IMPORTANT: Replace all {VARIABLES} with your actual values before deploying.
+#
+# This configuration is optimized for Intel QSV hardware acceleration.
+# Tested with 6th generation Intel CPUs and newer.
+# =============================================================================
+
+services:
+  frigate:
+    # -------------------------------------------------------------------------
+    # Container Settings
+    # -------------------------------------------------------------------------
+    container_name: frigate
+
+    # Pin to specific version for stability
+    # Check https://github.com/blakeblackshear/frigate/releases for updates
+    image: ghcr.io/blakeblackshear/frigate:0.14.1
+
+    # Restart unless explicitly stopped
+    restart: unless-stopped
+
+    # Required for hardware access
+    privileged: true
+
+    # -------------------------------------------------------------------------
+    # Shared Memory
+    # -------------------------------------------------------------------------
+    # Increase if you see "out of memory" errors
+    # 256MB is sufficient for 2-4 cameras
+    # Increase to 512mb for 6+ cameras
+    shm_size: "256mb"
+
+    # -------------------------------------------------------------------------
+    # Hardware Access - Intel QSV
+    # -------------------------------------------------------------------------
+    # /dev/dri provides access to Intel GPU for hardware acceleration
+    # This reduces CPU usage from ~100% to ~10%
+    devices:
+      - /dev/dri:/dev/dri
+
+    # -------------------------------------------------------------------------
+    # Group Permissions for GPU Access
+    # -------------------------------------------------------------------------
+    # IMPORTANT: Verify these group IDs on YOUR system!
+    #
+    # Find your group IDs:
+    #   getent group render  # Usually 992 or 110
+    #   getent group video   # Usually 44
+    #
+    # Replace with your actual GIDs if different
+    # -------------------------------------------------------------------------
+    group_add:
+      - "{RENDER_GROUP_ID}"   # render group (getent group render)
+      - "{VIDEO_GROUP_ID}"    # video group (getent group video)
+
+    # -------------------------------------------------------------------------
+    # Environment Variables
+    # -------------------------------------------------------------------------
+    environment:
+      # Intel media driver for QSV
+      LIBVA_DRIVER_NAME: iHD
+
+      # Timezone for correct timestamps
+      TZ: "{TIMEZONE}"
+
+      # Optional: RTSP password for restreaming
+      # FRIGATE_RTSP_PASSWORD: "your_secure_password"
+
+    # -------------------------------------------------------------------------
+    # Volume Mounts
+    # -------------------------------------------------------------------------
+    volumes:
+      # Sync container time with host
+      - /etc/localtime:/etc/localtime:ro
+
+      # Frigate configuration directory
+      - ./config:/config
+
+      # Recording storage
+      # IMPORTANT: Ensure this has sufficient space!
+      # Calculate: bitrate × cameras × seconds/day × retention_days ÷ 8
+      - ./storage:/media/frigate
+
+      # RAM-based cache for temporary files (faster, reduces disk wear)
+      - type: tmpfs
+        target: /tmp/cache
+        tmpfs:
+          size: 1G
+
+    # -------------------------------------------------------------------------
+    # Network Ports
+    # -------------------------------------------------------------------------
+    ports:
+      # Web UI - access at http://{NVR_IP}:5000
+      - "5000:5000"
+
+      # RTSP restream - for external access to processed streams
+      - "8554:8554"
+
+      # WebRTC - for low-latency live viewing
+      - "8555:8555/tcp"
+      - "8555:8555/udp"
+
+# =============================================================================
+# DEPLOYMENT COMMANDS
+# =============================================================================
+#
+# 1. Create directory structure:
+#    sudo mkdir -p /srv/frigate/{config,storage}
+#    cd /srv/frigate
+#
+# 2. Copy this file:
+#    cp docker-compose.yml /srv/frigate/
+#
+# 3. Copy and configure frigate config:
+#    cp frigate-config.yml /srv/frigate/config/config.yml
+#    # Edit config.yml with your camera settings
+#
+# 4. Verify GPU group IDs:
+#    getent group render video
+#    # Update group_add values if different
+#
+# 5. Start Frigate:
+#    docker compose up -d
+#
+# 6. Check logs:
+#    docker compose logs -f frigate
+#
+# 7. Access web UI:
+#    http://{NVR_IP}:5000
+#
+# =============================================================================
+# TROUBLESHOOTING
+# =============================================================================
+#
+# High CPU usage (no QSV):
+#   - Verify /dev/dri exists: ls -la /dev/dri
+#   - Check group permissions: getent group render video
+#   - Check logs: docker logs frigate | grep -i qsv
+#
+# Out of memory:
+#   - Increase shm_size to "512mb"
+#   - Reduce camera count or resolution
+#
+# Permission denied:
+#   - Ensure running as root or with sudo
+#   - Check volume mount permissions
+#
+# =============================================================================

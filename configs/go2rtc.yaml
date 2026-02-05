@@ -1,0 +1,126 @@
+# =============================================================================
+# go2rtc Configuration - NeuroSurveillance System v5.0
+# =============================================================================
+# Location: /opt/go2rtc/go2rtc.yaml
+#
+# IMPORTANT: Replace all {VARIABLES} with your actual values before deploying.
+#
+# This configuration uses rpicam-vid piped through ffmpeg for stable RTSP
+# streaming. This approach has been tested for 24/7 operation.
+# =============================================================================
+
+streams:
+  # -------------------------------------------------------------------------
+  # Camera 0 - Primary Camera
+  # -------------------------------------------------------------------------
+  # Stream name: {CAMERA_0_ID} (e.g., pi_cam_0)
+  # Access via: rtsp://{PI_IP}:8554/{CAMERA_0_ID}
+  # -------------------------------------------------------------------------
+  {CAMERA_0_ID}:
+    exec: >
+      rpicam-vid
+      --codec libav
+      --libav-format h264
+      --width {CAMERA_WIDTH}
+      --height {CAMERA_HEIGHT}
+      --framerate {CAMERA_FPS}
+      --bitrate {CAMERA_BITRATE}
+      --inline
+      --timeout 0
+      --camera 0
+      --level 4.1
+      --profile high
+      -o -
+      | ffmpeg -hide_banner -loglevel error
+        -f h264 -i -
+        -c copy
+        -f rtsp rtsp://127.0.0.1:8554/{CAMERA_0_ID}
+
+  # -------------------------------------------------------------------------
+  # Camera 1 - Secondary Camera
+  # -------------------------------------------------------------------------
+  # Stream name: {CAMERA_1_ID} (e.g., pi_cam_1)
+  # Access via: rtsp://{PI_IP}:8554/{CAMERA_1_ID}
+  # -------------------------------------------------------------------------
+  {CAMERA_1_ID}:
+    exec: >
+      rpicam-vid
+      --codec libav
+      --libav-format h264
+      --width {CAMERA_WIDTH}
+      --height {CAMERA_HEIGHT}
+      --framerate {CAMERA_FPS}
+      --bitrate {CAMERA_BITRATE}
+      --inline
+      --timeout 0
+      --camera 1
+      --level 4.1
+      --profile high
+      -o -
+      | ffmpeg -hide_banner -loglevel error
+        -f h264 -i -
+        -c copy
+        -f rtsp rtsp://127.0.0.1:8554/{CAMERA_1_ID}
+
+# -----------------------------------------------------------------------------
+# RTSP Server Configuration
+# -----------------------------------------------------------------------------
+# Listens on all interfaces, port 8554
+# Access streams via: rtsp://{PI_IP}:8554/{stream_name}
+# -----------------------------------------------------------------------------
+rtsp:
+  listen: ":8554"
+
+# -----------------------------------------------------------------------------
+# API Server Configuration
+# -----------------------------------------------------------------------------
+# Web interface and API available at: http://{PI_IP}:1984
+# Useful endpoints:
+#   - /api/streams     - List all streams and their status
+#   - /api/config      - View current configuration
+#   - /stream.html     - Web viewer for streams
+# -----------------------------------------------------------------------------
+api:
+  listen: ":1984"
+
+# -----------------------------------------------------------------------------
+# Logging Configuration
+# -----------------------------------------------------------------------------
+# Levels: trace, debug, info, warn, error
+# Use 'debug' for troubleshooting, 'info' for production
+# -----------------------------------------------------------------------------
+log:
+  level: info
+
+# =============================================================================
+# CONFIGURATION REFERENCE
+# =============================================================================
+#
+# Recommended Values:
+# -------------------
+# | Variable          | Recommended    | Notes                              |
+# |-------------------|----------------|-------------------------------------|
+# | {CAMERA_WIDTH}    | 1024           | Resolution width                    |
+# | {CAMERA_HEIGHT}   | 768            | Resolution height                   |
+# | {CAMERA_FPS}      | 15             | Frames per second                   |
+# | {CAMERA_BITRATE}  | 1500000        | 1.5 Mbps per camera                 |
+# | {CAMERA_0_ID}     | pi_cam_0       | Unique stream identifier            |
+# | {CAMERA_1_ID}     | pi_cam_1       | Unique stream identifier            |
+#
+# Resolution Presets:
+# -------------------
+# | Name      | Resolution | Storage/Day | Use Case                         |
+# |-----------|------------|-------------|-----------------------------------|
+# | HD        | 1280x720   | ~20 GB      | High detail analysis              |
+# | Standard  | 1024x768   | ~16 GB      | Balanced (recommended)            |
+# | Efficient | 800x600    | ~12 GB      | Long-term studies                 |
+# | Minimal   | 640x480    | ~8 GB       | Extended recording                |
+#
+# CRITICAL WARNINGS:
+# ------------------
+# 1. NEVER use --codec h265 - causes kernel panics on Pi 5
+# 2. Always use --codec libav --libav-format h264
+# 3. The ffmpeg pipe is required for stable RTSP output
+# 4. Do not use TCP localhost connections (proven unstable)
+#
+# =============================================================================
