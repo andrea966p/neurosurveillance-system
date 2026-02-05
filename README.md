@@ -2,7 +2,7 @@
 
 A production-ready video surveillance system designed for neuroscience research labs, featuring dual Raspberry Pi 5 cameras streaming to Frigate NVR with Intel QSV hardware acceleration.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/license-X11-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%205-red.svg)
 ![Frigate](https://img.shields.io/badge/Frigate-0.14+-green.svg)
 
@@ -231,7 +231,7 @@ Contributions are welcome! Please read [CONTRIBUTING.md](CONTRIBUTING.md) for gu
 
 ## License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) for details.
+This project is licensed under the X11 License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
