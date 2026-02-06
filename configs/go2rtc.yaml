@@ -30,11 +30,7 @@ streams:
       --camera 0
       --level 4.1
       --profile high
-      -o -
-      | ffmpeg -hide_banner -loglevel error
-        -f h264 -i -
-        -c copy
-        -f rtsp rtsp://127.0.0.1:8554/{CAMERA_0_ID}
+      --output -
 
   # -------------------------------------------------------------------------
   # Camera 1 - Secondary Camera
@@ -56,11 +52,7 @@ streams:
       --camera 1
       --level 4.1
       --profile high
-      -o -
-      | ffmpeg -hide_banner -loglevel error
-        -f h264 -i -
-        -c copy
-        -f rtsp rtsp://127.0.0.1:8554/{CAMERA_1_ID}
+      --output -
 
 # -----------------------------------------------------------------------------
 # RTSP Server Configuration

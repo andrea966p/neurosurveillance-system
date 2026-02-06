@@ -22,7 +22,7 @@ API_URL="http://localhost:1984/api/streams"
 # Logging Function
 # -----------------------------------------------------------------------------
 log_message() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
+    echo "[$(date -Iseconds)] $1" >> "$LOG_FILE"
 }
 
 # -----------------------------------------------------------------------------
@@ -71,8 +71,18 @@ fi
 # -----------------------------------------------------------------------------
 # Check: API responsiveness
 # -----------------------------------------------------------------------------
-if ! curl -sf "$API_URL" > /dev/null 2>&1; then
-    log_message "ERROR: go2rtc API not responding at $API_URL, restarting..."
+# Check: API responsiveness (with retry)
+# -----------------------------------------------------------------------------
+for i in {1..3}; do
+    if curl -sf "$API_URL" > /dev/null 2>&1; then
+        api_ok=true
+        break
+    fi
+    sleep 2
+done
+
+if [ "$api_ok" != "true" ]; then
+    log_message "ERROR: go2rtc API not responding at $API_URL after 3 attempts, restarting..."
     sudo systemctl restart go2rtc
     exit 0
 fi

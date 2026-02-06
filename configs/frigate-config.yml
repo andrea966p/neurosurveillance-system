@@ -91,7 +91,8 @@ cameras:
             - tcp
 
             # Buffer settings for network jitter
-            # Increase if experiencing frame drops
+            # Large buffer (512k) is intentional for TCP transport over WiFi
+            # Reduces frame drops at the cost of slight latency (~0.5s)
             - -buffer_size
             - "512000"
 
