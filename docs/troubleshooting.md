@@ -269,7 +269,6 @@ input_args:
 ```bash
 sudo systemctl stop go2rtc
 sudo pkill -9 rpicam-vid
-sudo pkill -9 ffmpeg
 sudo systemctl start go2rtc
 ```
 
@@ -285,7 +284,7 @@ docker compose up -d
 ```bash
 # On Pi
 sudo systemctl stop go2rtc
-sudo pkill -9 rpicam-vid go2rtc ffmpeg
+sudo pkill -9 rpicam-vid go2rtc
 sudo systemctl daemon-reload
 sudo systemctl start go2rtc
 

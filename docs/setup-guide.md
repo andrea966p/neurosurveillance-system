@@ -68,10 +68,25 @@ sudo apt update && sudo apt full-upgrade -y
 # Install dependencies
 sudo apt install -y curl wget ffmpeg
 
+# Install FULL rpicam-apps (NOT rpicam-apps-lite — lite lacks libav codec)
+sudo apt install -y rpicam-apps
+```
+
+**Verify camera software:**
+
+```bash
+# Check rpicam-vid has libav support
+rpicam-vid --version
+# MUST show: libav:1
+# If it shows libav:0, rpicam-apps-lite is installed instead — reinstall with:
+# sudo apt install -y rpicam-apps
+
 # Verify cameras are detected
 rpicam-hello --list-cameras
 # Should show 2 cameras
 ```
+
+> **WARNING**: `rpicam-apps-lite` (shipped with Raspberry Pi OS Lite) does NOT include the libav codec wrapper. Without the full `rpicam-apps` package, go2rtc will fail with `Unrecognised codec libav` error.
 
 ### Step 3: Network Configuration
 

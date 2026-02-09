@@ -34,7 +34,7 @@ This system provides 24/7 video recording for behavioral analysis in research en
 │  │ (pi_cam_1)    │  │                           │  │  HW Accel     │  │
 │  └───────────────┘  │                           │  └───────────────┘  │
 │                     │                           │                     │
-│  go2rtc + ffmpeg    │                           │  Web UI :5000       │
+│  go2rtc             │                           │  Web UI :5000       │
 │  Port 1984 (API)    │                           │  RTSP   :8554       │
 │  Port 8554 (RTSP)   │                           │  WebRTC :8555       │
 └─────────────────────┘                           └─────────────────────┘

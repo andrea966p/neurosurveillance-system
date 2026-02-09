@@ -5,8 +5,9 @@
 #
 # IMPORTANT: Replace all {VARIABLES} with your actual values before deploying.
 #
-# This configuration uses rpicam-vid piped through ffmpeg for stable RTSP
-# streaming. This approach has been tested for 24/7 operation.
+# This configuration uses rpicam-vid streaming directly to go2rtc via stdout.
+# Exec streams MUST be single-line quoted strings — YAML multi-line blocks
+# (exec: >) do NOT work with go2rtc and will silently fail.
 # =============================================================================
 
 streams:
@@ -15,22 +16,11 @@ streams:
   # -------------------------------------------------------------------------
   # Stream name: {CAMERA_0_ID} (e.g., pi_cam_0)
   # Access via: rtsp://{PI_IP}:8554/{CAMERA_0_ID}
+  #
+  # IMPORTANT: exec streams MUST be a single quoted string starting with
+  # "exec:" — never use YAML multi-line blocks (exec: >), they silently fail.
   # -------------------------------------------------------------------------
-  {CAMERA_0_ID}:
-    exec: >
-      rpicam-vid
-      --codec libav
-      --libav-format h264
-      --width {CAMERA_WIDTH}
-      --height {CAMERA_HEIGHT}
-      --framerate {CAMERA_FPS}
-      --bitrate {CAMERA_BITRATE}
-      --inline
-      --timeout 0
-      --camera 0
-      --level 4.1
-      --profile high
-      --output -
+  {CAMERA_0_ID}: "exec:rpicam-vid --codec libav --libav-format h264 --width {CAMERA_WIDTH} --height {CAMERA_HEIGHT} --framerate {CAMERA_FPS} --bitrate {CAMERA_BITRATE} --inline --timeout 0 --camera 0 --level 4.1 --profile high --output -"
 
   # -------------------------------------------------------------------------
   # Camera 1 - Secondary Camera
@@ -38,21 +28,7 @@ streams:
   # Stream name: {CAMERA_1_ID} (e.g., pi_cam_1)
   # Access via: rtsp://{PI_IP}:8554/{CAMERA_1_ID}
   # -------------------------------------------------------------------------
-  {CAMERA_1_ID}:
-    exec: >
-      rpicam-vid
-      --codec libav
-      --libav-format h264
-      --width {CAMERA_WIDTH}
-      --height {CAMERA_HEIGHT}
-      --framerate {CAMERA_FPS}
-      --bitrate {CAMERA_BITRATE}
-      --inline
-      --timeout 0
-      --camera 1
-      --level 4.1
-      --profile high
-      --output -
+  {CAMERA_1_ID}: "exec:rpicam-vid --codec libav --libav-format h264 --width {CAMERA_WIDTH} --height {CAMERA_HEIGHT} --framerate {CAMERA_FPS} --bitrate {CAMERA_BITRATE} --inline --timeout 0 --camera 1 --level 4.1 --profile high --output -"
 
 # -----------------------------------------------------------------------------
 # RTSP Server Configuration
@@ -112,7 +88,9 @@ log:
 # ------------------
 # 1. NEVER use --codec h265 - causes kernel panics on Pi 5
 # 2. Always use --codec libav --libav-format h264
-# 3. The ffmpeg pipe is required for stable RTSP output
-# 4. Do not use TCP localhost connections (proven unstable)
+# 3. Exec streams MUST be single-line quoted strings (never YAML multi-line)
+# 4. Do NOT pipe through ffmpeg (proven unstable for 24/7 operation)
+# 5. Do not use TCP localhost connections (proven unstable)
+# 6. Install rpicam-apps (full), NOT rpicam-apps-lite (lite lacks libav codec)
 #
 # =============================================================================

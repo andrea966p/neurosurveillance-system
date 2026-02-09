@@ -35,7 +35,7 @@ ExecStart=/opt/go2rtc/go2rtc -config /opt/go2rtc/go2rtc.yaml
 # CRITICAL: Process Termination Settings
 # -----------------------------------------------------------------------------
 # KillMode=control-group ensures ALL child processes are terminated
-# This includes rpicam-vid and ffmpeg processes spawned by go2rtc
+# This includes rpicam-vid processes spawned by go2rtc
 #
 # WITHOUT THIS SETTING:
 # - rpicam-vid processes become zombies on service restart
