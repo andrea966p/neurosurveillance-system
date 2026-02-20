@@ -1,9 +1,10 @@
 # =============================================================================
-# go2rtc Configuration - NeuroSurveillance System v5.0
+# go2rtc Configuration - NeuroSurveillance System v5.2
 # =============================================================================
 # Location: /opt/go2rtc/go2rtc.yaml
 #
 # IMPORTANT: Replace all {VARIABLES} with your actual values before deploying.
+# See production-values reference for actual values.
 #
 # This configuration uses rpicam-vid streaming directly to go2rtc via stdout.
 # Exec streams MUST be single-line quoted strings — YAML multi-line blocks
@@ -11,52 +12,25 @@
 # =============================================================================
 
 streams:
-  # -------------------------------------------------------------------------
-  # Camera 0 - Primary Camera
-  # -------------------------------------------------------------------------
   # Stream name: {CAMERA_0_ID} (e.g., pi_cam_0)
   # Access via: rtsp://{PI_IP}:8554/{CAMERA_0_ID}
-  #
-  # IMPORTANT: exec streams MUST be a single quoted string starting with
-  # "exec:" — never use YAML multi-line blocks (exec: >), they silently fail.
-  # -------------------------------------------------------------------------
-  {CAMERA_0_ID}: "exec:rpicam-vid --codec libav --libav-format h264 --width {CAMERA_WIDTH} --height {CAMERA_HEIGHT} --framerate {CAMERA_FPS} --bitrate {CAMERA_BITRATE} --inline --timeout 0 --camera 0 --level 4.1 --profile high --output -"
+  {CAMERA_0_ID}: "exec:rpicam-vid -n --codec libav --libav-format mpegts --width {CAMERA_WIDTH} --height {CAMERA_HEIGHT} --framerate {CAMERA_FPS} --bitrate {CAMERA_BITRATE} --inline --intra 15 --timeout 0 --camera 0 --level 4.1 --profile high --low-latency --output -"
 
-  # -------------------------------------------------------------------------
-  # Camera 1 - Secondary Camera
-  # -------------------------------------------------------------------------
   # Stream name: {CAMERA_1_ID} (e.g., pi_cam_1)
   # Access via: rtsp://{PI_IP}:8554/{CAMERA_1_ID}
-  # -------------------------------------------------------------------------
-  {CAMERA_1_ID}: "exec:rpicam-vid --codec libav --libav-format h264 --width {CAMERA_WIDTH} --height {CAMERA_HEIGHT} --framerate {CAMERA_FPS} --bitrate {CAMERA_BITRATE} --inline --timeout 0 --camera 1 --level 4.1 --profile high --output -"
+  {CAMERA_1_ID}: "exec:rpicam-vid -n --codec libav --libav-format mpegts --width {CAMERA_WIDTH} --height {CAMERA_HEIGHT} --framerate {CAMERA_FPS} --bitrate {CAMERA_BITRATE} --inline --intra 15 --timeout 0 --camera 1 --level 4.1 --profile high --low-latency --output -"
 
-# -----------------------------------------------------------------------------
-# RTSP Server Configuration
-# -----------------------------------------------------------------------------
-# Listens on all interfaces, port 8554
+# RTSP server -- listens on all interfaces
 # Access streams via: rtsp://{PI_IP}:8554/{stream_name}
-# -----------------------------------------------------------------------------
 rtsp:
   listen: ":8554"
 
-# -----------------------------------------------------------------------------
-# API Server Configuration
-# -----------------------------------------------------------------------------
-# Web interface and API available at: http://{PI_IP}:1984
-# Useful endpoints:
-#   - /api/streams     - List all streams and their status
-#   - /api/config      - View current configuration
-#   - /stream.html     - Web viewer for streams
-# -----------------------------------------------------------------------------
+# API / web interface -- http://{PI_IP}:1984
+# Useful endpoints: /api/streams, /api/config
 api:
   listen: ":1984"
 
-# -----------------------------------------------------------------------------
-# Logging Configuration
-# -----------------------------------------------------------------------------
 # Levels: trace, debug, info, warn, error
-# Use 'debug' for troubleshooting, 'info' for production
-# -----------------------------------------------------------------------------
 log:
   level: info
 
@@ -66,7 +40,7 @@ log:
 #
 # Recommended Values:
 # -------------------
-# | Variable          | Recommended    | Notes                              |
+# | Variable          | Recommended    | Notes                               |
 # |-------------------|----------------|-------------------------------------|
 # | {CAMERA_WIDTH}    | 1024           | Resolution width                    |
 # | {CAMERA_HEIGHT}   | 768            | Resolution height                   |
@@ -77,7 +51,7 @@ log:
 #
 # Resolution Presets:
 # -------------------
-# | Name      | Resolution | Storage/Day | Use Case                         |
+# | Name      | Resolution | Storage/Day | Use Case                          |
 # |-----------|------------|-------------|-----------------------------------|
 # | HD        | 1280x720   | ~20 GB      | High detail analysis              |
 # | Standard  | 1024x768   | ~16 GB      | Balanced (recommended)            |
@@ -86,11 +60,15 @@ log:
 #
 # CRITICAL WARNINGS:
 # ------------------
-# 1. NEVER use --codec h265 - causes kernel panics on Pi 5
-# 2. Always use --codec libav --libav-format h264
-# 3. Exec streams MUST be single-line quoted strings (never YAML multi-line)
-# 4. Do NOT pipe through ffmpeg (proven unstable for 24/7 operation)
-# 5. Do not use TCP localhost connections (proven unstable)
-# 6. Install rpicam-apps (full), NOT rpicam-apps-lite (lite lacks libav codec)
+# 1. NEVER use H.265/HEVC (--codec h265) -- causes kernel panics on Pi 5
+# 2. Use --codec libav --libav-format mpegts (MPEG-TS container, H.264 encoded)
+#    mpegts provides better framing and timestamps than raw h264 bitstream.
+#    Recommended by RPi camera docs for streaming use cases.
+# 3. --low-latency suppresses B-frames -- required for Pi 5 streaming stability
+# 4. --intra 15 = 1-second keyframe interval at 15fps (fast Frigate stream startup)
+# 5. -n disables preview window (required on headless Pi)
+# 6. Exec strings MUST be single-line quoted strings (never YAML multi-line)
+# 7. Do NOT pipe through ffmpeg (proven unstable for 24/7 operation)
+# 8. Install rpicam-apps (full), NOT rpicam-apps-lite (lite lacks libav codec)
 #
 # =============================================================================

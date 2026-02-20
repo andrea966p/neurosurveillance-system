@@ -1,5 +1,5 @@
 # =============================================================================
-# go2rtc Systemd Service - NeuroSurveillance System v5.0
+# go2rtc Systemd Service - NeuroSurveillance System v5.1
 # =============================================================================
 # Location: /etc/systemd/system/go2rtc.service
 #
@@ -10,7 +10,7 @@
 # =============================================================================
 
 [Unit]
-Description=go2rtc RTSP Streaming Service (NeuroSurveillance v5.0)
+Description=go2rtc RTSP Streaming Service (NeuroSurveillance v5.0 Hardened)
 Documentation=https://github.com/AlexxIT/go2rtc
 
 # Wait for network to be fully available before starting
@@ -29,6 +29,8 @@ Group=video
 WorkingDirectory=/opt/go2rtc
 
 # Start command
+# IR LED power spike prevention -- wait for boot power draw to settle
+ExecStartPre=/bin/sleep 60
 ExecStart=/opt/go2rtc/go2rtc -config /opt/go2rtc/go2rtc.yaml
 
 # -----------------------------------------------------------------------------
