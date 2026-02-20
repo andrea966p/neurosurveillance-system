@@ -1,0 +1,43 @@
+# =============================================================================
+# Session Daemon Configuration - NeuroSurveillance System v1.0
+# =============================================================================
+# Location: /opt/neurosurveillance/config.yaml
+#
+# IMPORTANT: Replace all {VARIABLES} with actual values from production-values.md
+# before deploying. See the vault at 00-config/production-values.md.
+# =============================================================================
+
+daemon:
+  poll_interval: 1.0          # seconds between Radiens polls
+  timezone: "Asia/Seoul"
+  log_level: info              # debug, info, warning, error
+  log_dir: "/opt/neurosurveillance/logs"
+
+api:
+  host: "127.0.0.1"           # localhost only -- not network-accessible
+  port: 8585
+
+mqtt:
+  host: "127.0.0.1"           # Mosquitto runs on same machine (Docker)
+  port: 1883
+
+frigate:
+  url: "http://127.0.0.1:5000"
+  export_dir: "/opt/neurosurveillance/exports"
+
+cameras:
+  chamber_0: "pi_cam_0"
+  chamber_1: "pi_cam_1"
+
+sessions:
+  data_dir: "/opt/neurosurveillance/sessions"
+
+# NAS transfer (deferred -- Tailscale NAS connectivity not yet set up)
+nas:
+  enabled: false
+  # host: "100.120.86.10"     # Synology NAS Tailscale IP
+  # path: "/volume1/neurosurveillance"
+  # method: "rsync"           # rsync or scp
+
+lab_members:
+  - andrea

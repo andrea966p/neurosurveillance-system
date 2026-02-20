@@ -1,0 +1,10 @@
+# Session Daemon Dependencies
+# Install: python3 -m pip install -r requirements.txt
+#
+# Note: 'radiens' is installed separately via NeuroNexus installer.
+# It is NOT on PyPI and cannot be pip-installed.
+
+paho-mqtt>=2.0,<3.0
+flask>=3.0,<4.0
+requests>=2.31,<3.0
+pyyaml>=6.0,<7.0

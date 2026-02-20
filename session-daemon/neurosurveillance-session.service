@@ -1,0 +1,51 @@
+# NeuroSurveillance Session Daemon systemd service
+#
+# Location: /etc/systemd/system/neurosurveillance-session.service
+# Machine:  ASUS Mini PC (192.168.0.50)
+#
+# Install:
+#   sudo cp neurosurveillance-session.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable neurosurveillance-session.service
+#   sudo systemctl start neurosurveillance-session.service
+#
+# Logs:
+#   journalctl -u neurosurveillance-session -f
+#   /opt/neurosurveillance/logs/session-daemon.log
+
+[Unit]
+Description=NeuroSurveillance Session Daemon
+Documentation=https://github.com/andrea966p/neurosurveillance-system
+After=docker.service
+Wants=docker.service
+
+[Service]
+Type=simple
+User=skimlab
+WorkingDirectory=/opt/neurosurveillance
+
+# Use the venv Python to pick up paho-mqtt, flask, radiens, etc.
+ExecStart=/opt/neurosurveillance/venv/bin/python /opt/neurosurveillance/session-daemon/daemon.py --config /opt/neurosurveillance/config.yaml
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Graceful shutdown
+KillSignal=SIGTERM
+TimeoutStopSec=15
+
+# Environment
+Environment=PYTHONUNBUFFERED=1
+
+# Resource limits
+MemoryMax=256M
+MemorySwapMax=0
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=neurosurveillance-session
+
+[Install]
+WantedBy=multi-user.target
