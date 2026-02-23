@@ -1,35 +1,59 @@
 # =============================================================================
-# Frigate NVR Docker Compose - NeuroSurveillance System v5.0
+# Frigate NVR Docker Compose - NeuroSurveillance System v5.1
 # =============================================================================
 # Location: /srv/frigate/docker-compose.yml
 #
 # IMPORTANT: Replace all {VARIABLES} with your actual values before deploying.
 #
-# This configuration is optimized for Intel QSV hardware acceleration.
-# Tested with 6th generation Intel CPUs and newer.
+# This configuration runs Frigate NVR with Mosquitto MQTT broker.
+# Optimized for Intel QSV hardware acceleration (6th gen+ Intel CPUs).
 # =============================================================================
 
 services:
+  # ---------------------------------------------------------------------------
+  # Mosquitto MQTT Broker
+  # ---------------------------------------------------------------------------
+  # Required for Frigate event system and session daemon recording control.
+  # The session daemon publishes ON/OFF to frigate/<camera>/recordings/set.
+  mosquitto:
+    container_name: mosquitto
+    image: eclipse-mosquitto:2
+    restart: unless-stopped
+    volumes:
+      - ./mosquitto:/mosquitto/config:ro
+    ports:
+      - "1883:1883"
+
+  # ---------------------------------------------------------------------------
+  # Frigate NVR
+  # ---------------------------------------------------------------------------
   frigate:
-    # -------------------------------------------------------------------------
-    # Container Settings
-    # -------------------------------------------------------------------------
     container_name: frigate
 
     # Pin to specific version for stability
     # Check https://github.com/blakeblackshear/frigate/releases for updates
-    image: ghcr.io/blakeblackshear/frigate:0.14.1
+    image: ghcr.io/blakeblackshear/frigate:0.16.1
 
     # Restart unless explicitly stopped
     restart: unless-stopped
 
-    # Required for hardware access
-    privileged: true
+    # Allow Frigate to flush recordings before stopping
+    stop_grace_period: 30s
+
+    # Ensure MQTT broker is running before Frigate starts
+    depends_on:
+      - mosquitto
+
+    # -------------------------------------------------------------------------
+    # Security & Capabilities
+    # -------------------------------------------------------------------------
+    # CAP_PERFMON replaces privileged: true (minimal privileges)
+    cap_add:
+      - CAP_PERFMON
 
     # -------------------------------------------------------------------------
     # Shared Memory
     # -------------------------------------------------------------------------
-    # Increase if you see "out of memory" errors
     # 256MB is sufficient for 2-4 cameras
     # Increase to 512mb for 6+ cameras
     shm_size: "256mb"
@@ -37,10 +61,10 @@ services:
     # -------------------------------------------------------------------------
     # Hardware Access - Intel QSV
     # -------------------------------------------------------------------------
-    # /dev/dri provides access to Intel GPU for hardware acceleration
-    # This reduces CPU usage from ~100% to ~10%
+    # Specific render node only (not full /dev/dri)
+    # Reduces CPU usage from ~100% to ~10%
     devices:
-      - /dev/dri:/dev/dri
+      - /dev/dri/renderD128:/dev/dri/renderD128
 
     # -------------------------------------------------------------------------
     # Group Permissions for GPU Access
@@ -64,12 +88,6 @@ services:
       # Intel media driver for QSV
       LIBVA_DRIVER_NAME: iHD
 
-      # Timezone for correct timestamps
-      TZ: "{TIMEZONE}"
-
-      # Optional: RTSP password for restreaming
-      # FRIGATE_RTSP_PASSWORD: "your_secure_password"
-
     # -------------------------------------------------------------------------
     # Volume Mounts
     # -------------------------------------------------------------------------
@@ -82,7 +100,7 @@ services:
 
       # Recording storage
       # IMPORTANT: Ensure this has sufficient space!
-      # Calculate: bitrate × cameras × seconds/day × retention_days ÷ 8
+      # 7 days @ 1.5Mbps x 2 cameras = ~225 GB
       - ./storage:/media/frigate
 
       # RAM-based cache for temporary files (faster, reduces disk wear)
@@ -98,7 +116,7 @@ services:
       # Web UI - access at http://{NVR_IP}:5000
       - "5000:5000"
 
-      # RTSP restream - for external access to processed streams
+      # RTSP restream
       - "8554:8554"
 
       # WebRTC - for low-latency live viewing
@@ -106,48 +124,72 @@ services:
       - "8555:8555/udp"
 
 # =============================================================================
+# MOSQUITTO CONFIGURATION
+# =============================================================================
+#
+# Create the file at /srv/frigate/mosquitto/mosquitto.conf with:
+#
+#   listener 1883
+#   allow_anonymous true
+#   persistence false
+#   log_dest stdout
+#
+# =============================================================================
+# DIRECTORY STRUCTURE
+# =============================================================================
+#
+# /srv/frigate/
+# ├── docker-compose.yml
+# ├── config/
+# │   └── config.yml          # Frigate config (frigate-config.yml)
+# ├── storage/                # Recordings (~225 GB for 7 days)
+# └── mosquitto/
+#     └── mosquitto.conf      # MQTT broker config
+#
+# =============================================================================
 # DEPLOYMENT COMMANDS
 # =============================================================================
 #
 # 1. Create directory structure:
-#    sudo mkdir -p /srv/frigate/{config,storage}
+#    sudo mkdir -p /srv/frigate/{config,storage,mosquitto}
 #    cd /srv/frigate
 #
-# 2. Copy this file:
+# 2. Copy files:
 #    cp docker-compose.yml /srv/frigate/
-#
-# 3. Copy and configure frigate config:
 #    cp frigate-config.yml /srv/frigate/config/config.yml
-#    # Edit config.yml with your camera settings
 #
-# 4. Verify GPU group IDs:
+# 3. Create mosquitto config:
+#    cat > /srv/frigate/mosquitto/mosquitto.conf << 'EOF'
+#    listener 1883
+#    allow_anonymous true
+#    persistence false
+#    log_dest stdout
+#    EOF
+#
+# 4. Verify GPU group IDs and update group_add values:
 #    getent group render video
-#    # Update group_add values if different
 #
-# 5. Start Frigate:
-#    docker compose up -d
+# 5. Start everything:
+#    cd /srv/frigate && docker compose up -d
 #
-# 6. Check logs:
+# 6. Check status:
+#    docker compose ps
 #    docker compose logs -f frigate
+#    docker compose logs -f mosquitto
 #
 # 7. Access web UI:
 #    http://{NVR_IP}:5000
 #
 # =============================================================================
-# TROUBLESHOOTING
+# v5.0 -> v5.1 CHANGES
 # =============================================================================
 #
-# High CPU usage (no QSV):
-#   - Verify /dev/dri exists: ls -la /dev/dri
-#   - Check group permissions: getent group render video
-#   - Check logs: docker logs frigate | grep -i qsv
-#
-# Out of memory:
-#   - Increase shm_size to "512mb"
-#   - Reduce camera count or resolution
-#
-# Permission denied:
-#   - Ensure running as root or with sudo
-#   - Check volume mount permissions
+# 1. Added Mosquitto MQTT broker as sibling container
+# 2. Frigate image updated from 0.14.1 to 0.16.1
+# 3. Removed privileged: true -- replaced with cap_add: CAP_PERFMON
+# 4. /dev/dri -> /dev/dri/renderD128 (minimal device access)
+# 5. Added stop_grace_period: 30s (prevent recording corruption on shutdown)
+# 6. Added depends_on: mosquitto (startup ordering)
+# 7. Removed TZ environment variable (Frigate reads from /etc/localtime)
 #
 # =============================================================================
