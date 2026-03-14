@@ -1,10 +1,10 @@
 # NeuroSurveillance System
 
-A production-ready video surveillance system designed for neuroscience research labs, featuring dual Raspberry Pi 5 cameras streaming to Frigate NVR with Intel QSV hardware acceleration.
+A production-ready video surveillance system designed for neuroscience research labs, featuring 4 cameras across 2 Raspberry Pi 5 nodes streaming to Frigate NVR with Intel QSV hardware acceleration.
 
 ![License](https://img.shields.io/badge/license-X11-blue.svg)
 ![Platform](https://img.shields.io/badge/platform-Raspberry%20Pi%205-red.svg)
-![Frigate](https://img.shields.io/badge/Frigate-0.14+-green.svg)
+![Frigate](https://img.shields.io/badge/Frigate-0.16.1-green.svg)
 
 ## Overview
 
@@ -12,7 +12,7 @@ This system provides 24/7 video recording for behavioral analysis in research en
 
 ### Key Features
 
-- **Dual Camera Support**: Two Pi Camera modules per Raspberry Pi 5
+- **4-Camera Multi-Pi Support**: Two Pi Camera modules on each of two Raspberry Pi 5 nodes
 - **H.264 Hardware Encoding**: Stable, efficient encoding via libav
 - **Intel QSV Decoding**: GPU-accelerated processing on NVR (9-12% CPU vs 100%)
 - **Automatic Recovery**: Hardware watchdog + monitoring scripts
@@ -22,22 +22,25 @@ This system provides 24/7 video recording for behavioral analysis in research en
 ### Architecture
 
 ```
-┌─────────────────────┐         RTSP/TCP          ┌─────────────────────┐
-│   Raspberry Pi 5    │ ──────────────────────────│    NVR Server       │
-│                     │    192.168.x.x:8554       │    (Ubuntu/Docker)  │
-│  ┌───────────────┐  │                           │                     │
-│  │ Camera 0      │  │                           │  ┌───────────────┐  │
-│  │ (pi_cam_0)    │──│───────────────────────────│──│   Frigate     │  │
-│  └───────────────┘  │                           │  │   Container   │  │
-│  ┌───────────────┐  │                           │  │               │  │
-│  │ Camera 1      │──│───────────────────────────│──│  Intel QSV    │  │
-│  │ (pi_cam_1)    │  │                           │  │  HW Accel     │  │
-│  └───────────────┘  │                           │  └───────────────┘  │
-│                     │                           │                     │
-│  go2rtc             │                           │  Web UI :5000       │
-│  Port 1984 (API)    │                           │  RTSP   :8554       │
-│  Port 8554 (RTSP)   │                           │  WebRTC :8555       │
-└─────────────────────┘                           └─────────────────────┘
+┌─────────────────────┐                           ┌─────────────────────┐
+│  Pi 1 (192.168.0.11)│         RTSP/TCP          │    NVR Server       │
+│                     │ ─────────────────────────▶│   (192.168.0.50)    │
+│  pi_cam_0 ──────────│──┐                        │                     │
+│  pi_cam_1 ──────────│──┤                        │  ┌───────────────┐  │
+│  go2rtc :8554       │  │                        │  │   Frigate     │  │
+└─────────────────────┘  │                        │  │   Container   │  │
+                         ├───────────────────────▶│  │   Intel QSV   │  │
+┌─────────────────────┐  │                        │  └───────────────┘  │
+│  Pi 2 (192.168.0.12)│  │                        │                     │
+│                     │  │                        │  ┌───────────────┐  │
+│  pi_cam_2 ──────────│──┤                        │  │  Session      │  │
+│  pi_cam_3 ──────────│──┘                        │  │  Daemon       │  │
+│  go2rtc :8554       │ ─────────────────────────▶│  │  (MQTT ctrl)  │  │
+└─────────────────────┘                           │  └───────────────┘  │
+                                                  │                     │
+                                                  │  Web UI :5000       │
+                                                  │  RTSP   :8554       │
+                                                  └─────────────────────┘
 ```
 
 ## Quick Start
@@ -68,12 +71,15 @@ Copy and edit the configuration files, replacing all `{VARIABLES}`:
 
 | Variable | Description | Example |
 |----------|-------------|---------|
-| `{PI_IP}` | Raspberry Pi static IP | `192.168.1.100` |
+| `{PI1_IP}` | Raspberry Pi 1 static IP | `192.168.0.11` |
+| `{PI2_IP}` | Raspberry Pi 2 static IP | `192.168.0.12` |
 | `{PI_USER}` | Pi username | `pi` |
 | `{PI_HOME}` | Pi home directory | `/home/pi` |
-| `{NVR_IP}` | NVR server IP | `192.168.1.50` |
-| `{CAMERA_0_ID}` | First camera stream name | `pi_cam_0` |
-| `{CAMERA_1_ID}` | Second camera stream name | `pi_cam_1` |
+| `{NVR_IP}` | NVR server IP | `192.168.0.50` |
+| `{CAMERA_0_ID}` | Pi 1 camera 0 stream name | `pi_cam_0` |
+| `{CAMERA_1_ID}` | Pi 1 camera 1 stream name | `pi_cam_1` |
+| `{CAMERA_2_ID}` | Pi 2 camera 0 stream name | `pi_cam_2` |
+| `{CAMERA_3_ID}` | Pi 2 camera 1 stream name | `pi_cam_3` |
 | `{TIMEZONE}` | Your timezone | `America/New_York` |
 
 ### 3. Deploy to Raspberry Pi
@@ -131,6 +137,10 @@ curl http://{NVR_IP}:5000/api/stats
 | `config.txt` | `/boot/firmware/` | Pi boot hardening (append to existing) |
 | `docker-compose.yml` | `/srv/frigate/` | Frigate container setup |
 | `frigate-config.yml` | `/srv/frigate/config/` | Frigate recording settings |
+
+## Session Daemon
+
+The session daemon runs on the NVR server and controls Frigate recording via MQTT, synchronized with Radiens EEG acquisition. The actively maintained version is in the [neurosurveillance](https://github.com/andrea966p/neurosurveillance) monorepo under `backend/`. The copy in `session-daemon/` here is kept for reference only.
 
 ## Documentation
 
@@ -194,10 +204,9 @@ See [scripts/](scripts/) for monitoring implementations.
 ```
 Daily Storage = Bitrate(Mbps) × 24 × 3600 × Cameras ÷ 8 (bytes to bits)
 
-Examples:
-- 2 cameras @ 1.5 Mbps = ~32 GB/day
-- 2 cameras @ 1.0 Mbps = ~22 GB/day
-- 4 cameras @ 1.5 Mbps = ~65 GB/day
+Examples (4-camera system):
+- 4 cameras @ 1.5 Mbps = ~65 GB/day  (~450 GB / 7 days)
+- 4 cameras @ 1.0 Mbps = ~43 GB/day  (~300 GB / 7 days)
 ```
 
 With 7-day retention: multiply by 7 for total storage needed.
@@ -214,7 +223,13 @@ neurosurveillance-system/
 │   ├── go2rtc.service        # systemd service
 │   ├── config.txt            # Pi boot hardening
 │   ├── docker-compose.yml    # Frigate Docker setup
-│   └── frigate-config.yml    # Frigate NVR config
+│   └── frigate-config.yml    # Frigate NVR config (4 cameras)
+├── session-daemon/           # Session daemon (deprecated — see neurosurveillance repo)
+│   ├── daemon.py
+│   ├── api.py
+│   ├── frigate_controller.py
+│   ├── radiens_poller.py
+│   └── session_manager.py
 ├── scripts/
 │   ├── watchdog.sh           # Monitoring script
 │   ├── health-check.sh       # System health check
