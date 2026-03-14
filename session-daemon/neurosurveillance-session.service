@@ -36,7 +36,10 @@ KillSignal=SIGTERM
 TimeoutStopSec=15
 
 # Environment
+# Uses Cognito token auth via ~/.config/radiens/session.json (refreshed on Allego GUI login).
+# Note: RADIENS_OFFLINE=1 requires an offline license (license.bin) from NeuroNexus -- not activated.
 Environment=PYTHONUNBUFFERED=1
+Environment=HOME=/home/skimlab
 
 # Resource limits
 MemoryMax=256M

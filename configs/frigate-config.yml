@@ -1,5 +1,5 @@
 # =============================================================================
-# Frigate NVR Configuration - NeuroSurveillance System v5.1
+# Frigate NVR Configuration - NeuroSurveillance System v5.2
 # =============================================================================
 # Location: /srv/frigate/config/config.yml
 #
@@ -63,7 +63,7 @@ record:
   retain:
     # Number of days to keep recordings
     # Adjust based on storage capacity
-    # 7 days @ 1.5Mbps x 2 cameras = ~225 GB
+    # 7 days @ 1.5Mbps x 4 cameras = ~450 GB
     days: 7
     mode: all
 
@@ -82,13 +82,13 @@ snapshots:
 # -----------------------------------------------------------------------------
 cameras:
   # ---------------------------------------------------------------------------
-  # Camera 0 (Chamber 0)
+  # Camera 0 (Chamber 0) — Pi 1
   # ---------------------------------------------------------------------------
   {CAMERA_0_ID}:
     ffmpeg:
       inputs:
-        # RTSP stream from Raspberry Pi via go2rtc
-        - path: rtsp://{PI_IP}:8554/{CAMERA_0_ID}
+        # RTSP stream from Raspberry Pi 1 via go2rtc
+        - path: rtsp://{PI1_IP}:8554/{CAMERA_0_ID}
 
           # Input arguments for stable streaming
           input_args:
@@ -118,12 +118,58 @@ cameras:
       enabled: true
 
   # ---------------------------------------------------------------------------
-  # Camera 1 (Chamber 1)
+  # Camera 1 (Chamber 1) — Pi 1
   # ---------------------------------------------------------------------------
   {CAMERA_1_ID}:
     ffmpeg:
       inputs:
-        - path: rtsp://{PI_IP}:8554/{CAMERA_1_ID}
+        - path: rtsp://{PI1_IP}:8554/{CAMERA_1_ID}
+          input_args:
+            - -rtsp_transport
+            - tcp
+            - -buffer_size
+            - "512000"
+            - -max_delay
+            - "500000"
+          roles:
+            - record
+
+    detect:
+      enabled: false
+
+    record:
+      enabled: true
+
+  # ---------------------------------------------------------------------------
+  # Camera 2 (Chamber 2) — Pi 2
+  # ---------------------------------------------------------------------------
+  {CAMERA_2_ID}:
+    ffmpeg:
+      inputs:
+        - path: rtsp://{PI2_IP}:8554/{CAMERA_2_ID}
+          input_args:
+            - -rtsp_transport
+            - tcp
+            - -buffer_size
+            - "512000"
+            - -max_delay
+            - "500000"
+          roles:
+            - record
+
+    detect:
+      enabled: false
+
+    record:
+      enabled: true
+
+  # ---------------------------------------------------------------------------
+  # Camera 3 (Chamber 3) — Pi 2
+  # ---------------------------------------------------------------------------
+  {CAMERA_3_ID}:
+    ffmpeg:
+      inputs:
+        - path: rtsp://{PI2_IP}:8554/{CAMERA_3_ID}
           input_args:
             - -rtsp_transport
             - tcp
@@ -158,12 +204,23 @@ logger:
 #
 # | Variable        | Description                  | Example              |
 # |-----------------|------------------------------|----------------------|
-# | {PI_IP}         | Raspberry Pi IP address      | 192.168.0.11         |
-# | {CAMERA_0_ID}   | First camera stream name     | pi_cam_0             |
-# | {CAMERA_1_ID}   | Second camera stream name    | pi_cam_1             |
+# | {PI1_IP}        | Raspberry Pi 1 IP address    | 192.168.0.11         |
+# | {PI2_IP}        | Raspberry Pi 2 IP address    | 192.168.0.12         |
+# | {CAMERA_0_ID}   | Pi 1 camera 0 stream name    | pi_cam_0             |
+# | {CAMERA_1_ID}   | Pi 1 camera 1 stream name    | pi_cam_1             |
+# | {CAMERA_2_ID}   | Pi 2 camera 0 stream name    | pi_cam_2             |
+# | {CAMERA_3_ID}   | Pi 2 camera 1 stream name    | pi_cam_3             |
 # | {TIMEZONE}      | Your timezone                | Asia/Seoul           |
 #
 # =============================================================================
+# v5.1 -> v5.2 CHANGES
+# =============================================================================
+#
+# 1. Expanded from 2 cameras (single Pi) to 4 cameras (2 Pis)
+# 2. Split {PI_IP} into {PI1_IP} and {PI2_IP}
+# 3. Added {CAMERA_2_ID} and {CAMERA_3_ID} for Pi 2
+# 4. Updated storage estimate for 4 cameras (~450 GB at 7 days)
+#
 # v5.0 -> v5.1 CHANGES
 # =============================================================================
 #

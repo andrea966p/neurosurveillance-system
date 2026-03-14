@@ -102,21 +102,22 @@ class RadiensPoller:
             self._consecutive_errors = 0
 
             # Parse recording state
-            rec_str = str(allego_status.recording)
-            if rec_str == "R_ON":
+            rec = allego_status.recording
+            rec_mode = str(rec.mode) if hasattr(rec, "mode") else str(rec)
+            if rec_mode == "R_ON":
                 current_state = RecordingState.ON
-            elif rec_str == "R_OFF":
+            elif rec_mode == "R_OFF":
                 current_state = RecordingState.OFF
             else:
                 current_state = RecordingState.UNKNOWN
-                logger.warning("Unexpected recording state: %s", rec_str)
+                logger.warning("Unexpected recording state: %s", rec_mode)
 
-            # Extract metadata from status
+            # Extract metadata from recording spec
             status = RadiensStatus(
                 recording=current_state,
                 stream=str(getattr(allego_status, "stream", "")),
-                base_name=str(getattr(allego_status, "base_name", "")),
-                file_path=str(getattr(allego_status, "path", "")),
+                base_name=str(getattr(rec, "base_name", "")),
+                file_path=str(getattr(rec, "path", "")),
                 connected=True,
             )
 

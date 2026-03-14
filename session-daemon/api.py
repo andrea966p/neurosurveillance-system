@@ -25,6 +25,16 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+
+@app.after_request
+def add_cors_headers(response):
+    """Allow requests from Tauri webview (tauri://localhost) and dev servers."""
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    return response
+
+
 # These are set by daemon.py at startup via init_api()
 _session_manager: "SessionManager | None" = None
 _radiens_poller: "RadiensPoller | None" = None
